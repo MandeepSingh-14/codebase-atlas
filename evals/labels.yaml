@@ -1,0 +1,13 @@
+# Hand-labeled ground truth for evaluating the structural analysis.
+# Each entry: a repo path (relative to project root) + what a human says
+# the entry points and single most-central node should be.
+#
+# This is what turns "I built a codebase mapper" into "I built one and
+# measured that it identifies entry points at F1 = X" -- a defensible claim.
+repos:
+  - name: sample_pkg
+    path: tests/fixtures/sample_pkg
+    expected_entrypoints:
+      - app
+      - app.main
+    expected_most_central: core.Calculator

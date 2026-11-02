@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Codebase Cartographer</title>
+<link rel="stylesheet" href="/static/app.css">
+<script defer src="/static/vendor/cytoscape.min.js"></script>
+<script defer src="/static/app.js"></script>
+</head>
+<body>
+<header class="app-header">
+  <div class="brand"><span class="mark">◈</span><div>Cartographer<small>YOUR CODE, CONNECTED</small></div></div>
+  <form id="analyzeForm"><label class="sr-only" for="pathInput">Repository path</label><input id="pathInput" placeholder="Local path to a Python repository" required><button id="analyzeBtn" class="primary">Analyze</button></form>
+  <div class="connection"><span id="connectionDot" class="dot"></span><span id="status" role="status">Connecting…</span><button id="retryBtn" type="button" hidden>Reconnect</button></div>
+</header>
+<nav class="mobile-nav" aria-label="Workspace views"><button data-view="explore">Explore</button><button data-view="map" class="active">Map</button><button data-view="inspect">Inspect</button><button data-view="chat">Ask AI</button></nav>
+<main data-mobile-view="map">
+  <section class="explorer" aria-label="Repository explorer">
+    <div class="panel-title"><div><span class="eyebrow">WORKSPACE</span><h2 id="repoName">Your repository</h2></div><button id="refreshBtn" title="Re-analyze the current repository" disabled>↻</button></div>
+    <div class="explorer-scroll">
+      <div class="metric-grid"><div><strong id="fileMetric">—</strong><span>Python files</span></div><div><strong id="symbolMetric">—</strong><span>Symbols</span></div></div>
+      <label class="field-label" for="symbolSearch">Find a symbol</label><input id="symbolSearch" placeholder="Search names…" autocomplete="off"><div id="searchResults"></div>
+      <details open><summary>Entry points <span id="entryCount" class="count">0</span></summary><div id="entryList" class="item-list"><p class="muted">Analyze a repository to begin.</p></div></details>
+      <details><summary>Frequently called</summary><div id="hotspots" class="item-list"></div></details>
+      <details><summary>Import cycles <span id="cycleCount" class="count">0</span></summary><div id="cycles" class="item-list"></div></details>
+      <details><summary>Saved places <span id="bookmarkCount" class="count">0</span></summary><div id="bookmarks" class="item-list"></div></details>
+      <details><summary>Compare analyses</summary><label class="field-label" for="baselineSelect">Earlier snapshot</label><select id="baselineSelect"><option value="">Re-analyze to compare</option></select><button id="compareBtn" class="wide" disabled>Show changes</button><div id="comparison" class="item-list"></div></details>
+      <details><summary>Analysis diagnostics</summary><p class="muted small">Unresolved calls are not assumed to be internal dependencies.</p><div id="diagnostics" class="item-list"></div></details>
+    </div>
+    <div class="explorer-footer"><button id="exportGraph" disabled>Export graph</button><button id="exportReport" disabled>Export investigation</button></div>
+  </section>
+  <section class="map-section" aria-label="Codebase map">
+    <div class="map-heading"><div><span class="eyebrow">DEPENDENCY MAP</span><h1 id="mapTitle">Find your way through the code</h1></div><button id="resetMap" type="button" disabled>Reset view</button></div>
+    <div class="map-toolbar">
+      <label>Detail<select id="lod"><option value="module">Modules</option><option value="class">Modules + classes</option><option value="all" selected>All symbols</option></select></label>
+      <label>Edges<select id="edgeFilter"><option value="all">All relationships</option><option value="calls">Calls</option><option value="imports">Imports</option><option value="contains">Contains</option></select></label>
+      <div class="toolbar-actions"><button id="layoutBtn" title="Arrange visible nodes without overlapping positions">Arrange</button><button id="fitBtn">Fit</button><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button></div>
+    </div>
+    <div class="map-canvas"><div id="cy"></div><div id="mapEmpty"><div class="hero-mark">◈</div><h2>A clear view of your codebase.</h2><p>Open a Python repository, trace its relationships,<br>and ask questions grounded in source.</p></div></div>
+    <div id="focusBar" class="focus-bar" hidden><span id="focusLabel"></span><button id="clearFocus">Show whole map</button></div>
+    <div class="map-footer"><div class="legend"><span class="module">● Module</span><span class="class">● Class</span><span class="function">● Function</span><span class="method">● Method</span></div><span id="stats"></span></div>
+  </section>
+  <aside>
+    <div class="aside-tabs" role="tablist" aria-label="Analysis panels"><button id="inspectTab" role="tab" aria-selected="true" aria-controls="inspector">Inspect & trace</button><button id="chatTab" role="tab" aria-selected="false" aria-controls="chatPanel">Ask the codebase <span class="spark">✦</span></button></div>
+    <section id="inspector" aria-label="Selected source" role="tabpanel">
+      <div class="section-heading"><h2>Source inspector</h2><button id="clearSelection" hidden>Clear</button></div>
+      <div id="nodeDetails" class="muted empty-detail">Select a symbol on the map or in the explorer.<br><br>Follow its callers, inspect source evidence, or trace the flow from an entry point.</div>
+      <div id="nodeActions" class="node-actions" hidden><button id="impactBtn">What depends on this?</button><button id="flowBtn">Trace calls →</button><button id="saveNode">☆ Save place</button></div>
+      <div id="exploration" hidden><div class="section-heading"><h3 id="exploreTitle"></h3><label class="small">Depth <select id="depthSelect"><option>1</option><option selected>3</option><option>6</option></select></label></div><div id="exploreResults" class="item-list"></div></div>
+      <details id="pathDetails" hidden><summary>Find a call path</summary><label class="field-label" for="targetInput">Target symbol</label><input id="targetInput" list="symbolOptions" placeholder="Qualified symbol name"><datalist id="symbolOptions"></datalist><button id="pathBtn" class="wide">Find path from selection</button><div id="pathResult" class="item-list"></div></details>
+      <div id="sourceHeading" class="source-heading"></div><pre id="sourceCode" tabindex="0" hidden></pre>
+      <div id="sourceNavigation" hidden><button id="prevSource">← Previous</button><button id="nextSource">Next →</button></div>
+      <div id="relations" class="item-list"></div>
+    </section>
+    <section id="chatPanel" class="chat-section" aria-label="Ask the codebase" role="tabpanel" hidden>
+      <div class="section-heading"><h2>Ask the codebase</h2><span id="modelBadge" class="badge">Connecting…</span></div><p id="modelNote" class="muted small"></p>
+      <div id="chatMessages" role="log" aria-live="polite"><div class="welcome"><span class="spark">✦</span><h3>Start with a question.</h3><p>Get answers you can follow back to the code.</p><div class="suggestions"><button data-question="Where are the entry points?">Find entry points ↗</button><button data-question="Explain the selected symbol and what it calls.">Explain selected code ↗</button></div></div></div>
+      <div class="context-row"><div id="chatContext" class="context">Context: whole repository</div><button id="clearChat" title="Clear conversation">Clear chat</button></div>
+      <form id="chatForm"><label class="sr-only" for="questionInput">Ask a question</label><textarea id="questionInput" rows="3" maxlength="2000" placeholder="Where does validation happen?" required></textarea><button id="sendBtn" class="primary" disabled>Ask ↗</button></form>
+      <p class="footnote">Citations link to source. Static analysis can miss dynamic calls.</p>
+    </section>
+  </aside>
+</main>
+<div id="toast" role="status" hidden></div>
+</body></html>
